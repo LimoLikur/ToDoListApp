@@ -11,14 +11,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.example.todolist.domain.Todo
-import androidx.compose.material3.SmallTopAppBar
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoListScreen(
     viewModel: TodoViewModel
 ) {
-    val state = viewModel.uiState
+    val state by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -55,7 +57,7 @@ fun TodoListScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (state.todos.isEmpty()) {
-                Text("Belum ada tugas. Mulai tulis satu dulu. 😉")
+                Text("Belum ada tugas. Mulai tulis satu dulu. :D")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
@@ -63,8 +65,8 @@ fun TodoListScreen(
                     items(state.todos, key = { it.id }) { todo ->
                         TodoItem(
                             todo = todo,
-                            onToggle = { viewModel.toggleTodo(todo.id) },
-                            onDelete = { viewModel.deleteTodo(todo.id) }
+                            onToggle = { viewModel.toggleTodo(todo) },
+                            onDelete = { viewModel.deleteTodo(todo) }
                         )
                     }
                 }
@@ -86,7 +88,8 @@ fun TodoItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
                 checked = todo.isDone,

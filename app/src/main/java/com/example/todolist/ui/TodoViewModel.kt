@@ -1,51 +1,57 @@
 package com.example.todolist.ui
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.todolist.domain.Todo
+import com.example.todolist.domain.repository.TodoRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class TodoUiState(
     val todos: List<Todo> = emptyList(),
     val inputText: String = ""
 )
 
-class TodoViewModel : ViewModel() {
+class TodoViewModel(
+    private val repository: TodoRepository
+) : ViewModel() {
 
-    var uiState by mutableStateOf(TodoUiState())
-        private set
+    private val _uiState = MutableStateFlow(TodoUiState())
+    val uiState: StateFlow<TodoUiState> = _uiState.asStateFlow()
+
+    init {
+        // Ambil data dari DB dan terus dengarkan perubahan
+        viewModelScope.launch {
+            repository.getTodos().collect { list ->
+                _uiState.update { it.copy(todos = list) }
+            }
+        }
+    }
 
     fun onInputChange(newText: String) {
-        uiState = uiState.copy(inputText = newText)
+        _uiState.update { it.copy(inputText = newText) }
     }
 
     fun addTodo() {
-        val text = uiState.inputText.trim()
-        if (text.isBlank()) return
-
-        val newTodo = Todo(
-            id = System.currentTimeMillis(),
-            title = text
-        )
-
-        uiState = uiState.copy(
-            todos = listOf(newTodo) + uiState.todos,
-            inputText = ""
-        )
+        val text = _uiState.value.inputText
+        viewModelScope.launch {
+            repository.addTodo(text)
+            _uiState.update { it.copy(inputText = "") }
+        }
     }
 
-    fun toggleTodo(id: Long) {
-        uiState = uiState.copy(
-            todos = uiState.todos.map {
-                if (it.id == id) it.copy(isDone = !it.isDone) else it
-            }
-        )
+    fun toggleTodo(todo: Todo) {
+        viewModelScope.launch {
+            repository.toggleTodo(todo)
+        }
     }
 
-    fun deleteTodo(id: Long) {
-        uiState = uiState.copy(
-            todos = uiState.todos.filterNot { it.id == id }
-        )
+    fun deleteTodo(todo: Todo) {
+        viewModelScope.launch {
+            repository.deleteTodo(todo)
+        }
     }
 }
